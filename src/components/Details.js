@@ -1,26 +1,44 @@
-import React from 'react';
+import React, {useCallback, useState} from 'react';
 import {Modal, StyleSheet, Text, View} from 'react-native';
-import {Button} from 'react-native-elements';
+import {Button, colors, ThemeContext} from 'react-native-elements';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import axios from 'axios';
 
-export default function Details({show, onHide}) {
+export default function Details({data, show, onHide}) {
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const onDownload = () => {
+    // axios.get(data.url);
+    setIsDownloading(true);
+    setTimeout(() => setIsDownloading(false), 2000);
+    console.log('download!');
+  };
+
+  if (!data) return null;
   return (
     <Modal
-      animationType="none" // "slide"
+      animationType="slide"
       transparent={true}
       visible={show}
       onRequestClose={() => {
         onHide();
       }}
     >
-      <View style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <Text style={styles.modalText}>Hello World!</Text>
-
-          <Button
-            style={{...styles.openButton, ...styles.textStyle, backgroundColor: '#2196F3'}}
-            title="Hide"
-            onPress={onHide}
-          />
+      <View style={styles.modal}>
+        <View style={styles.modalBody}>
+          <View style={styles.linksView}>
+            <Text style={styles.linksItem}>{data.date}</Text>
+            <Button
+              style={styles.linksItem}
+              buttonStyle={{width: 110}}
+              title="Download"
+              icon={<Icon name="download" size={20} color={colors.primary} />}
+              loading={isDownloading}
+              onPress={onDownload}
+              type="clear"
+            />
+          </View>
+          <Button title="Close" onPress={onHide} type="outline" />
         </View>
       </View>
     </Modal>
@@ -28,18 +46,17 @@ export default function Details({show, onHide}) {
 }
 
 const styles = StyleSheet.create({
-  centeredView: {
-    flex: 1,
+  modal: {
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 22,
+    height: '100%',
   },
-  modalView: {
-    margin: 20,
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 35,
+  modalBody: {
     alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 4,
+    padding: 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -49,19 +66,12 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  openButton: {
-    backgroundColor: '#F194FF',
-    borderRadius: 20,
-    padding: 10,
-    elevation: 2,
+  linksView: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginBottom: 20,
   },
-  textStyle: {
-    color: 'white',
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  modalText: {
-    marginBottom: 15,
-    textAlign: 'center',
+  linksItem: {
+    flex: 0.5,
   },
 });

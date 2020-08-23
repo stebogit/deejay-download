@@ -1,11 +1,12 @@
 import React, {useState} from 'react';
-import {SafeAreaView, StyleSheet, View, Text, ActivityIndicator} from 'react-native';
+import {SafeAreaView, StyleSheet, View, Text} from 'react-native';
 import {Button} from 'react-native-elements';
 import Details from '../Details';
 import {CalendarList} from 'react-native-calendars';
 import dayjs from 'dayjs'; // http://arshaw.com/xdate/#Formatting
 import axios from 'axios';
 import allSettled from 'promise.allsettled';
+import Loader from '../Loader';
 
 allSettled.shim(); // will be a no-op if not needed
 
@@ -13,11 +14,12 @@ function daysInMonth(month) {
   let date = dayjs().month(month).startOf('month');
   const end = dayjs().month(month).endOf('month');
   const days = [];
-  while (date.unix() <= end.unix()) {
+  while (date.isBefore(end)) {
     days.push({
       year: date.format('YYYY'),
       month: date.format('MM'),
       day: date.format('DD'),
+      isWeekend: ['Saturday', 'Sunday'].includes(date.format('dddd')),
     });
     date = date.add(1, 'day');
   }
@@ -31,43 +33,59 @@ export default function Calendar() {
   const [loading, setLoading] = useState(false);
   return (
     <SafeAreaView style={styles.container}>
+      <Loader show={loading} />
+
       <CalendarList
         // [{"dateString": "2020-07-22", "day": 22, "month": 7, "timestamp": 1595376000000, "year": 2020},
         // {"dateString": "2020-08-22", "day": 22, "month": 8, "timestamp": 1598054400000, "year": 2020}]
         onVisibleMonthsChange={async (months) => {
           const dates = months.reduce((days, m) => [...days, ...daysInMonth(m.month - 1)], []);
-          const links = dates.map(({year, month, day}) => {
-            return {
-              // https://media.deejay.it/2020/07/24/episodes/deejay_chiama_italia/20200724.mp3
-              url: `https://media.deejay.it/${year}/${month}/${day}/episodes/deejay_chiama_italia/${year}${month}${day}.mp3`,
-              date: `${year}-${month}-${day}`,
-            };
-          });
+          const marks = dates.reduce((marks, {year, month, day, isWeekend}) => {
+            const date = `${year}-${month}-${day}`;
+            if (isWeekend) {
+              marks[date] = {
+                disabled: true,
+                disableTouchEvent: true,
+              };
+            } else {
+              marks[date] = {
+                // https://media.deejay.it/2020/07/24/episodes/deejay_chiama_italia/20200724.mp3
+                url: `https://media.deejay.it/${year}/${month}/${day}/episodes/deejay_chiama_italia/${year}${month}${day}.mp3`,
+                date: `${year}-${month}-${day}`,
+              };
+            }
+            return marks;
+          }, {});
 
           try {
             setLoading(true);
             const results = await Promise.allSettled(
-              links.map((link) => axios.head(link.url, {headers: {'x-date': link.date}})),
+              Object.keys(marks).reduce((requests, date) => {
+                const mark = marks[date];
+                if (mark.url) {
+                  requests = [...requests, axios.head(mark.url, {headers: {'x-date': mark.date}})];
+                }
+                return requests;
+              }, []),
             );
-
-            const marks = results.reduce((marked, result) => {
-              // console.log(result);
+            results.forEach((result) => {
               if (result.status === 'fulfilled') {
                 const date = result.value.config.headers['x-date'];
-                marked[date] = {
+                marks[date] = {
+                  ...marks[date],
                   marked: true,
                   dotColor: 'red',
                   selectedColor: 'blue',
                 };
               } else {
                 const date = result.reason.config.headers['x-date'];
-                marked[date] = {
+                marks[date] = {
+                  ...marks[date],
                   disabled: true,
                   disableTouchEvent: true,
                 };
               }
-              return marked;
-            }, {});
+            });
             setLoading(false);
             setMarkedDates(marks);
           } catch (e) {
@@ -85,12 +103,13 @@ export default function Calendar() {
         maxDate={dayjs().format('YYYY-MM-DD')}
         // {dateString": "2020-08-16", "day": 16, "month": 8, "timestamp": 1597536000000, "year": 2020}
         onDayPress={({dateString}) => {
-          setSelectedDay(dayjs(dateString));
+          // console.log(markedDates[dateString]);
+          setSelectedDay(markedDates[dateString]);
           setModalVisible(true);
         }}
-        onDayLongPress={(day) => {
-          console.log('long pressed day', day);
-        }}
+        // onDayLongPress={(day) => {
+        //   console.log('long pressed day', day);
+        // }}
         // monthFormat={'MMMM yyyy'}
         // onMonthChange={(month) => {
         //   console.log('month changed', month);
@@ -111,18 +130,13 @@ export default function Calendar() {
         <Button title="Download" onPress={() => setModalVisible(true)} />
       </View>
 
-      <Details show={modalVisible} onHide={() => setModalVisible(false)} selectedDay={selectedDay} />
+      <Details show={modalVisible} onHide={() => setModalVisible(false)} data={selectedDay} />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 10,
-  },
-  items: {
-    flex: 0.5,
-    paddingVertical: 7, // don't cut button shadow
-    paddingHorizontal: 5,
+    margin: 10,
   },
 });
