@@ -42,12 +42,12 @@ export const theme = {
   Button: {
     raised: true,
   },
-  // colors: {
-  //   primary: '#749bff',
-  //   secondary: '#efb3fc',
-  //   // secondary: '#ee81df',
-  //   muted: '#bdc6cf',
-  // },
+  colors: {
+    deejay: '#f21f0c',
+    //   secondary: '#efb3fc',
+    //   // secondary: '#ee81df',
+    //   muted: '#bdc6cf',
+  },
 };
 
 export const highlightBorder = (color) => ({borderColor: color, borderWidth: 1});

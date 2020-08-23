@@ -1,8 +1,9 @@
-import React, {useCallback, useState} from 'react';
+import React, {useState} from 'react';
 import {Modal, StyleSheet, Text, View} from 'react-native';
-import {Button, colors, ThemeContext} from 'react-native-elements';
+import {Button, colors, Divider} from 'react-native-elements';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import axios from 'axios';
+// import {highlightBorder} from '../constants';
+// import axios from 'axios';
 
 export default function Details({data, show, onHide}) {
   const [isDownloading, setIsDownloading] = useState(false);
@@ -26,8 +27,12 @@ export default function Details({data, show, onHide}) {
     >
       <View style={styles.modal}>
         <View style={styles.modalBody}>
+          <View style={styles.modalTitle}>
+            <Text style={styles.title}>{data.date}</Text>
+          </View>
+          <Divider />
           <View style={styles.linksView}>
-            <Text style={styles.linksItem}>{data.date}</Text>
+            <Text>DJ Chiama Italia</Text>
             <Button
               style={styles.linksItem}
               buttonStyle={{width: 110}}
@@ -52,6 +57,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: '100%',
   },
+  modalTitle: {
+    paddingBottom: 10,
+  },
   modalBody: {
     alignItems: 'center',
     backgroundColor: 'white',
@@ -65,13 +73,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+    width: 300,
   },
   linksView: {
     alignItems: 'center',
+    justifyContent: 'space-between',
     flexDirection: 'row',
     marginBottom: 20,
+    width: '100%',
+    // ...highlightBorder('red'),
   },
   linksItem: {
-    flex: 0.5,
+    flex: 1,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
   },
 });

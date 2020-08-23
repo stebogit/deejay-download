@@ -3,10 +3,11 @@ import {SafeAreaView, StyleSheet, View, Text} from 'react-native';
 import {Button} from 'react-native-elements';
 import Details from '../Details';
 import {CalendarList} from 'react-native-calendars';
-import dayjs from 'dayjs'; // http://arshaw.com/xdate/#Formatting
+import dayjs from 'dayjs';
 import axios from 'axios';
 import allSettled from 'promise.allsettled';
-import Loader from '../Loader';
+// import Loader from '../Loader';
+import {theme} from '../../constants';
 
 allSettled.shim(); // will be a no-op if not needed
 
@@ -33,7 +34,7 @@ export default function Calendar() {
   const [loading, setLoading] = useState(false);
   return (
     <SafeAreaView style={styles.container}>
-      <Loader show={loading} />
+      {/*<Loader show={loading} />*/}
 
       <CalendarList
         // [{"dateString": "2020-07-22", "day": 22, "month": 7, "timestamp": 1595376000000, "year": 2020},
@@ -74,8 +75,9 @@ export default function Calendar() {
                 marks[date] = {
                   ...marks[date],
                   marked: true,
-                  dotColor: 'red',
+                  dotColor: theme.colors.deejay,
                   selectedColor: 'blue',
+                  selectedDotColor: 'blue',
                 };
               } else {
                 const date = result.reason.config.headers['x-date'];
@@ -93,13 +95,13 @@ export default function Calendar() {
             console.error(e.message);
           }
         }}
-        pastScrollRange={6}
+        pastScrollRange={12}
         futureScrollRange={0}
         // CALENDAR PROPS
         // markingType={'multi-dot'}
         displayLoadingIndicator
         current={dayjs().format('YYYY-MM-DD')} // last downloaded?
-        minDate={dayjs().subtract(6, 'months').format('YYYY-MM-DD')}
+        minDate={dayjs().startOf('year').format('YYYY-MM-DD')}
         maxDate={dayjs().format('YYYY-MM-DD')}
         // {dateString": "2020-08-16", "day": 16, "month": 8, "timestamp": 1597536000000, "year": 2020}
         onDayPress={({dateString}) => {
@@ -110,7 +112,7 @@ export default function Calendar() {
         // onDayLongPress={(day) => {
         //   console.log('long pressed day', day);
         // }}
-        // monthFormat={'MMMM yyyy'}
+        monthFormat={'MMMM yyyy'}
         // onMonthChange={(month) => {
         //   console.log('month changed', month);
         // }}
@@ -122,6 +124,32 @@ export default function Calendar() {
         // )}
         // Collection of dates that have to be marked. Default = {}
         markedDates={markedDates}
+        theme={{
+          todayTextColor: theme.colors.deejay,
+          indicatorColor: theme.colors.deejay,
+          //   backgroundColor: '#ffffff',
+          //   calendarBackground: '#ffffff',
+          //   textSectionTitleColor: '#b6c1cd',
+          //   textSectionTitleDisabledColor: '#d9e1e8',
+          //   selectedDayBackgroundColor: '#00adf5',
+          //   selectedDayTextColor: '#ffffff',
+          //   dayTextColor: '#2d4150',
+          //   textDisabledColor: '#d9e1e8',
+          //   dotColor: '#00adf5',
+          //   selectedDotColor: '#ffffff',
+          //   arrowColor: 'orange',
+          //   disabledArrowColor: '#d9e1e8',
+          //   monthTextColor: 'blue',
+          //   textDayFontFamily: 'monospace',
+          //   textMonthFontFamily: 'monospace',
+          //   textDayHeaderFontFamily: 'monospace',
+          //   textDayFontWeight: '300',
+          //   textMonthFontWeight: 'bold',
+          //   textDayHeaderFontWeight: '300',
+          //   textDayFontSize: 16,
+          //   textMonthFontSize: 16,
+          //   textDayHeaderFontSize: 16,
+        }}
       />
 
       <Text>Calendario</Text>
