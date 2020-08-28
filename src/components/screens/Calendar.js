@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import {SafeAreaView, StyleSheet, View, Text} from 'react-native';
 import {Button} from 'react-native-elements';
 import Details from '../Details';
-import {CalendarList} from 'react-native-calendars';
+import {CalendarList} from 'react-native-calendars'; // https://github.com/wix/react-native-calendars
 import dayjs from 'dayjs';
 import axios from 'axios';
 import allSettled from 'promise.allsettled';
@@ -53,6 +53,7 @@ export default function Calendar() {
                 // https://media.deejay.it/2020/07/24/episodes/deejay_chiama_italia/20200724.mp3
                 url: `https://media.deejay.it/${year}/${month}/${day}/episodes/deejay_chiama_italia/${year}${month}${day}.mp3`,
                 date: `${year}-${month}-${day}`,
+                filename: `djci-${year}-${month}-${day}__.mp3`,
               };
             }
             return marks;
