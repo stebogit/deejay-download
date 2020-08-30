@@ -4,12 +4,11 @@ import {Button, colors, Divider} from 'react-native-elements';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {requestPermission, isPermissionGranted} from './permissions';
 // import {highlightBorder} from '../constants';
-import RNFS from 'react-native-fs';
-
-let jobId = -1;
+import RNFS from 'react-native-fs'; // https://github.com/itinance/react-native-fs
 
 export default function Details({data, show, onHide}) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [jobId, setJobId] = useState(-1);
 
   const onDownload = async () => {
     const granted = await isPermissionGranted();
@@ -67,7 +66,7 @@ export default function Details({data, show, onHide}) {
       progressDivider: 10,
     });
 
-    jobId = ret.jobId;
+    setJobId(ret.jobId);
 
     ret.promise
       .then((res) => {
@@ -75,21 +74,18 @@ export default function Details({data, show, onHide}) {
         // res = {bytesWritten: 90490253, statusCode: 200, jobId: 1}
       })
       .catch((err) => {
+        if (err.code === 'EUNSPECIFIED' && jobId === -1) return; // process was cancelled
         Alert.alert(`ERROR: Code: ${err.code} Message: ${err.message}`);
         console.error('Download error', err);
       })
       .finally(() => {
         setIsDownloading(false);
-        jobId = -1;
+        setJobId(-1);
       });
   };
 
-  // TODO add stop download
   const stopDownload = () => {
-    if (jobId !== -1) {
-      RNFS.stopDownload(jobId);
-      jobId = -1;
-    }
+    if (jobId !== -1) RNFS.stopDownload(jobId);
   };
 
   if (!data) return null;
@@ -120,7 +116,21 @@ export default function Details({data, show, onHide}) {
               type="clear"
             />
           </View>
-          <Button title="Close" onPress={onHide} type="outline" />
+          {isDownloading ? (
+            <Button
+              title="Stop"
+              icon={<Icon name="cancel" size={20} color={colors.primary} />}
+              onPress={stopDownload}
+              type="outline"
+            />
+          ) : (
+            <Button
+              title="Close"
+              icon={<Icon name="close" size={20} color={colors.primary} />}
+              onPress={onHide}
+              type="outline"
+            />
+          )}
         </View>
       </View>
     </Modal>
