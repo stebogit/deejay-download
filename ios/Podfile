@@ -14,6 +14,8 @@ target 'DeejayDownload' do
 
   pod 'RNFS', :path => '../node_modules/react-native-fs'
 
+  pod 'RNReactNativeHapticFeedback', :path => '../node_modules/react-native-haptic-feedback'
+
   target 'DeejayDownloadTests' do
     inherit! :complete
     # Pods for testing

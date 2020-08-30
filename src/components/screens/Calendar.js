@@ -11,7 +11,7 @@ import {theme} from '../../constants';
 
 allSettled.shim(); // will be a no-op if not needed
 
-const beginning = dayjs().startOf('year');
+const beginning = dayjs('2020-01-01');
 const today = dayjs();
 
 function daysInMonth(month) {
@@ -106,14 +106,7 @@ class Calendar extends Component {
                 }
                 return requests;
               }, []);
-              const requestsString = Object.keys(marks).reduce((requests, date) => {
-                const mark = marks[date];
-                if (mark.url) {
-                  requests = [...requests, mark.date];
-                }
-                return requests;
-              }, []);
-              console.log('requests', requestsString);
+
               const results = await Promise.allSettled(requests);
 
               results.forEach((result) => {
