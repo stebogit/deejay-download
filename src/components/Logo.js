@@ -1,13 +1,11 @@
 import React from 'react';
 import {View, StyleSheet, Pressable} from 'react-native';
-import {theme} from '../constants';
+import {theme, storageKey} from '../constants';
 import AsyncStorage from '@react-native-community/async-storage';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import Toast from 'react-native-simple-toast';
 
 import Deejay from './logo-deejay.svg';
-
-const storageKey = 'dj-download-dates';
 
 export default function Logo({width = 45, height = 45, containerStyle, ...rest}) {
   return (

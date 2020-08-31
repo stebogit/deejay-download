@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
 import {Modal, StyleSheet, Text, View, Alert} from 'react-native';
+// https://github.com/react-native-elements/react-native-elements/blob/next/src/config/colors.js
 import {Button, colors, Divider} from 'react-native-elements';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {requestPermission, isPermissionGranted} from './permissions';
@@ -97,7 +98,14 @@ export default function Details({data, show, onHide}) {
           </View>
           {isDownloading && (
             <View style={styles.progressView}>
-              <ProgressBar progress={progress} height={2} width={null} />
+              <ProgressBar
+                progress={progress}
+                height={2}
+                width={null}
+                borderWidth={0}
+                color={colors.primary}
+                borderColor={colors.primary}
+              />
             </View>
           )}
           {isDownloading ? (
@@ -154,7 +162,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   progressView: {
-    marginTop: -25,
+    marginTop: -22,
     marginBottom: 20,
     width: '100%',
   },

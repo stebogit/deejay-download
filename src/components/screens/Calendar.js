@@ -1,13 +1,12 @@
 import React, {Component} from 'react';
-import {SafeAreaView, StyleSheet, View, Text} from 'react-native';
-import {Button} from 'react-native-elements';
+import {SafeAreaView, StyleSheet} from 'react-native';
 import Details from '../Details';
 import {CalendarList} from 'react-native-calendars'; // https://github.com/wix/react-native-calendars
 import dayjs from 'dayjs';
 import axios from 'axios';
 import allSettled from 'promise.allsettled';
 import AsyncStorage from '@react-native-community/async-storage';
-import {theme} from '../../constants';
+import {theme, storageKey} from '../../constants';
 
 allSettled.shim(); // will be a no-op if not needed
 
@@ -30,14 +29,11 @@ function daysInMonth(month) {
   return days;
 }
 
-const storageKey = 'dj-download-dates';
-
 class Calendar extends Component {
   state = {
     modalVisible: false,
     selectedDay: null,
     markedDates: {},
-    // loading: false,
   };
 
   componentDidMount() {
@@ -78,13 +74,11 @@ class Calendar extends Component {
             const dates = months.reduce((days, m) => [...days, ...daysInMonth(m.month - 1)], []);
             const marks = dates.reduce((marks, {year, month, day, isWeekend}) => {
               const date = `${year}-${month}-${day}`;
-              // console.log(date, markedDates[date]);
               if (!markedDates[date]) {
                 // queue new request only if not already available
                 if (isWeekend) {
                   marks[date] = {
                     disabled: true,
-                    disableTouchEvent: true,
                   };
                 } else {
                   marks[date] = {
@@ -116,15 +110,25 @@ class Calendar extends Component {
                     ...marks[date],
                     marked: true,
                     dotColor: theme.colors.deejay,
-                    selectedColor: 'blue',
-                    selectedDotColor: 'blue',
                   };
                 } else {
                   const date = result.reason.config.headers['x-date'];
                   marks[date] = {
                     ...marks[date],
                     disabled: true,
-                    disableTouchEvent: true,
+                    // customStyles: today.isSame(dayjs(date), 'day')
+                    //   ? {
+                    //       container: {
+                    //         borderRadius: 16,
+                    //         borderColor: theme.colors.deejay,
+                    //         borderWidth: 2,
+                    //       },
+                    //       text: {
+                    //         color: theme.colors.deejay,
+                    //         fontWeight: 'bold',
+                    //       },
+                    //     }
+                    //   : {},
                   };
                 }
               });
@@ -137,64 +141,56 @@ class Calendar extends Component {
           futureScrollRange={0}
           // CALENDAR PROPS
           // markingType={'multi-dot'}
+          disableAllTouchEventsForDisabledDays
           displayLoadingIndicator
-          current={today.format('YYYY-MM-DD')} // last downloaded?
+          // current={today.format('YYYY-MM-DD')} // current month
           minDate={beginning.format('YYYY-MM-DD')}
           maxDate={today.format('YYYY-MM-DD')}
-          // {dateString": "2020-08-16", "day": 16, "month": 8, "timestamp": 1597536000000, "year": 2020}
           onDayPress={({dateString}) => {
-            // console.log(markedDates[dateString]);
+            // {dateString": "2020-08-16", "day": 16, "month": 8, "timestamp": 1597536000000, "year": 2020}
             this.setSelectedDay(markedDates[dateString]);
             this.showModal();
           }}
-          // onDayLongPress={(day) => {
-          //   console.log('long pressed day', day);
-          // }}
           monthFormat={'MMMM yyyy'}
-          // onMonthChange={(month) => {
-          //   console.log('month changed', month);
-          // }}
           firstDay={1} // Monday. dayNames and dayNamesShort should still start from Sunday.
-          // renderHeader={({dateString}) => (
-          //   <Text>
-          //     {dayjs(dateString).format('MMMM YYYY')} {loading && <ActivityIndicator color="#999999" size={20} />}
-          //   </Text>
-          // )}
-          // Collection of dates that have to be marked. Default = {}
           markedDates={markedDates}
           theme={{
             todayTextColor: theme.colors.deejay,
-            indicatorColor: theme.colors.deejay,
-            //   backgroundColor: '#ffffff',
-            //   calendarBackground: '#ffffff',
-            //   textSectionTitleColor: '#b6c1cd',
-            //   textSectionTitleDisabledColor: '#d9e1e8',
-            //   selectedDayBackgroundColor: '#00adf5',
-            //   selectedDayTextColor: '#ffffff',
-            //   dayTextColor: '#2d4150',
-            //   textDisabledColor: '#d9e1e8',
-            //   dotColor: '#00adf5',
-            //   selectedDotColor: '#ffffff',
-            //   arrowColor: 'orange',
-            //   disabledArrowColor: '#d9e1e8',
-            //   monthTextColor: 'blue',
-            //   textDayFontFamily: 'monospace',
-            //   textMonthFontFamily: 'monospace',
-            //   textDayHeaderFontFamily: 'monospace',
-            //   textDayFontWeight: '300',
-            //   textMonthFontWeight: 'bold',
-            //   textDayHeaderFontWeight: '300',
-            //   textDayFontSize: 16,
-            //   textMonthFontSize: 16,
-            //   textDayHeaderFontSize: 16,
+            indicatorColor: theme.colors.deejay, // loading indicator
+            textSectionTitleColor: '#94a1ae',
+            // day number
+            textDayFontFamily: 'sans-serif',
+            textDayFontSize: 15,
+            // day name
+            textMonthFontFamily: 'sans-serif',
+            textMonthFontWeight: 'bold',
+            textMonthFontSize: 20,
+            // month-year header
+            textDayHeaderFontFamily: 'sans-serif',
+            textDayHeaderFontSize: 16,
+            // // selected
+            // selectedDayBackgroundColor: 'white',
+            // selectedDayTextColor: theme.colors.deejay,
+            'stylesheet.day.basic': {
+              today: {
+                borderRadius: 16,
+                borderColor: theme.colors.deejay,
+                borderWidth: 2,
+              },
+              todayText: {
+                color: theme.colors.deejay,
+                fontWeight: 'bold',
+              },
+            },
+            // 'stylesheet.calendar-list.main': {
+            //   container: {
+            //     // borderColor: 'red',
+            //     // borderWidth: 1,
+            //     paddingBottom: 30,
+            //   },
+            // },
           }}
         />
-
-        <Text>Calendario</Text>
-
-        <View>
-          <Button title="Download" onPress={this.showModal} />
-        </View>
 
         <Details show={modalVisible} onHide={this.hideModal} data={selectedDay} />
       </SafeAreaView>
@@ -204,7 +200,9 @@ class Calendar extends Component {
 
 const styles = StyleSheet.create({
   container: {
-    margin: 10,
+    backgroundColor: 'white',
+    height: '100%',
+    alignItems: 'center',
   },
 });
 
