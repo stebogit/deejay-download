@@ -19,7 +19,7 @@ export default function Logo({width = 45, height = 45, containerStyle, ...rest})
               ignoreAndroidSystemSettings: false,
             });
           })
-          .catch((e) => console.log('storage clean'));
+          .catch(console.error);
       }}
     >
       <View width={width} height={height} style={{...containerStyle, ...styles.container}} {...rest}>

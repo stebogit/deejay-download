@@ -13,6 +13,12 @@ allSettled.shim(); // will be a no-op if not needed
 const beginning = dayjs('2020-01-01');
 const today = dayjs();
 
+const dots = {
+  nosp: {key: 'nosp', color: 'blue'},
+  djci: {key: 'djci', color: theme.colors.deejay},
+  volo: {key: 'volo', color: '#33b72e'},
+};
+
 function daysInMonth(month) {
   let date = dayjs().month(month).startOf('month');
   const end = dayjs().month(month).endOf('month');
@@ -22,7 +28,6 @@ function daysInMonth(month) {
       year: date.format('YYYY'),
       month: date.format('MM'),
       day: date.format('DD'),
-      isWeekend: ['Saturday', 'Sunday'].includes(date.format('dddd')),
     });
     date = date.add(1, 'day');
   }
@@ -37,10 +42,10 @@ class Calendar extends Component {
   };
 
   componentDidMount() {
-    this.setDefaults();
+    this.setFromStorage();
   }
 
-  setDefaults = async () => {
+  setFromStorage = async () => {
     try {
       const markedDates = await AsyncStorage.getItem(storageKey);
       if (markedDates) {
@@ -64,86 +69,92 @@ class Calendar extends Component {
     });
   };
 
+  onMonthChange = async (months) => {
+    const dates = months.reduce((days, m) => [...days, ...daysInMonth(m.month - 1)], []);
+    try {
+      const requests = dates.reduce((requests, {year, month, day}) => {
+        const date = `${year}-${month}-${day}`;
+        if (this.state.markedDates[date]) {
+          return requests;
+        }
+
+        return [
+          ...requests,
+          axios.head(
+            // https://media.deejay.it/2020/07/24/episodes/deejay_chiama_italia/20200724.mp3
+            `https://media.deejay.it/${year}/${month}/${day}/episodes/deejay_chiama_italia/${year}${month}${day}.mp3`,
+            {
+              headers: {
+                'x-request': JSON.stringify({date, showName: 'Deejay Chiama Italia', showCode: 'djci'}),
+              },
+            },
+          ),
+          axios.head(
+            // https://media.deejay.it/2020/07/24/episodes/no_spoiler/20200724.mp3
+            `https://media.deejay.it/${year}/${month}/${day}/episodes/no_spoiler/${year}${month}${day}.mp3`,
+            {
+              headers: {
+                'x-request': JSON.stringify({date, showName: 'No Spoiler', showCode: 'nosp'}),
+              },
+            },
+          ),
+          axios.head(
+            // https://media.deejay.it/2020/08/21/episodes/il_volo_del_mattino/20200821.mp3
+            `https://media.deejay.it/${year}/${month}/${day}/episodes/il_volo_del_mattino/${year}${month}${day}.mp3`,
+            {
+              headers: {
+                'x-request': JSON.stringify({date, showName: 'Il Volo del Mattino', showCode: 'volo'}),
+              },
+            },
+          ),
+        ];
+      }, []);
+
+      const results = await Promise.allSettled(requests);
+
+      const marks = results.reduce((marks, result) => {
+        if (result.status === 'fulfilled') {
+          const {date, showCode, showName} = JSON.parse(result.value.config.headers['x-request']);
+          const mark = marks[date] || {};
+          const markDots = mark.dots || [];
+          const shows = mark.shows || [];
+          marks[date] = {
+            ...marks[date],
+            date,
+            dots: [...markDots, dots[showCode]],
+            shows: [...shows, {url: result.value.config.url, fileName: `${date}-${showCode}.mp3`, showCode, showName}],
+          };
+        } else {
+          const {date} = JSON.parse(result.reason.config.headers['x-request']);
+          if (!marks[date]) marks[date] = {};
+        }
+        return marks;
+      }, {});
+
+      // disable empty dates
+      for (const [, mark] of Object.entries(marks)) {
+        if (!mark.shows) mark.disabled = true;
+      }
+
+      this.setMarkedDates(marks);
+    } catch (e) {
+      console.error(e.message);
+    }
+  };
+
   render() {
     const {modalVisible, selectedDay, markedDates} = this.state;
 
     return (
       <SafeAreaView style={styles.container}>
         <CalendarList
-          onVisibleMonthsChange={async (months) => {
-            const dates = months.reduce((days, m) => [...days, ...daysInMonth(m.month - 1)], []);
-            const marks = dates.reduce((marks, {year, month, day, isWeekend}) => {
-              const date = `${year}-${month}-${day}`;
-              if (!markedDates[date]) {
-                // queue new request only if not already available
-                if (isWeekend) {
-                  marks[date] = {
-                    disabled: true,
-                  };
-                } else {
-                  marks[date] = {
-                    // https://media.deejay.it/2020/07/24/episodes/deejay_chiama_italia/20200724.mp3
-                    url: `https://media.deejay.it/${year}/${month}/${day}/episodes/deejay_chiama_italia/${year}${month}${day}.mp3`,
-                    date: `${year}-${month}-${day}`,
-                    filename: `djci-${year}-${month}-${day}.mp3`,
-                  };
-                }
-              }
-              return marks;
-            }, {});
-
-            try {
-              const requests = Object.keys(marks).reduce((requests, date) => {
-                const mark = marks[date];
-                if (mark.url) {
-                  requests = [...requests, axios.head(mark.url, {headers: {'x-date': mark.date}})];
-                }
-                return requests;
-              }, []);
-
-              const results = await Promise.allSettled(requests);
-
-              results.forEach((result) => {
-                if (result.status === 'fulfilled') {
-                  const date = result.value.config.headers['x-date'];
-                  marks[date] = {
-                    ...marks[date],
-                    marked: true,
-                    dotColor: theme.colors.deejay,
-                  };
-                } else {
-                  const date = result.reason.config.headers['x-date'];
-                  marks[date] = {
-                    ...marks[date],
-                    disabled: true,
-                    // customStyles: today.isSame(dayjs(date), 'day')
-                    //   ? {
-                    //       container: {
-                    //         borderRadius: 16,
-                    //         borderColor: theme.colors.deejay,
-                    //         borderWidth: 2,
-                    //       },
-                    //       text: {
-                    //         color: theme.colors.deejay,
-                    //         fontWeight: 'bold',
-                    //       },
-                    //     }
-                    //   : {},
-                  };
-                }
-              });
-              this.setMarkedDates(marks);
-            } catch (e) {
-              console.error(e.message);
-            }
-          }}
+          onVisibleMonthsChange={this.onMonthChange}
           pastScrollRange={today.diff(beginning, 'month')}
           futureScrollRange={0}
           // CALENDAR PROPS
-          // markingType={'multi-dot'}
+          markingType={'multi-dot'}
           disableAllTouchEventsForDisabledDays
           displayLoadingIndicator
-          // current={today.format('YYYY-MM-DD')} // current month
           minDate={beginning.format('YYYY-MM-DD')}
           maxDate={today.format('YYYY-MM-DD')}
           onDayPress={({dateString}) => {
@@ -155,9 +166,7 @@ class Calendar extends Component {
           firstDay={1} // Monday. dayNames and dayNamesShort should still start from Sunday.
           markedDates={markedDates}
           theme={{
-            todayTextColor: theme.colors.deejay,
             indicatorColor: theme.colors.deejay, // loading indicator
-            textSectionTitleColor: '#94a1ae',
             // day number
             textDayFontFamily: 'sans-serif',
             textDayFontSize: 15,
@@ -168,27 +177,20 @@ class Calendar extends Component {
             // month-year header
             textDayHeaderFontFamily: 'sans-serif',
             textDayHeaderFontSize: 16,
-            // // selected
-            // selectedDayBackgroundColor: 'white',
-            // selectedDayTextColor: theme.colors.deejay,
+            textSectionTitleColor: '#94a1ae',
+            // today
+            todayTextColor: theme.colors.deejay,
             'stylesheet.day.basic': {
               today: {
                 borderRadius: 16,
                 borderColor: theme.colors.deejay,
-                borderWidth: 2,
+                borderWidth: 1,
               },
               todayText: {
                 color: theme.colors.deejay,
                 fontWeight: 'bold',
               },
             },
-            // 'stylesheet.calendar-list.main': {
-            //   container: {
-            //     // borderColor: 'red',
-            //     // borderWidth: 1,
-            //     paddingBottom: 30,
-            //   },
-            // },
           }}
         />
 
