@@ -133,7 +133,10 @@ class Calendar extends Component {
 
       // disable empty dates
       for (const [, mark] of Object.entries(marks)) {
-        if (!mark.shows) mark.disabled = true;
+        if (!mark.shows) {
+          mark.disabled = true;
+          mark.disableTouchEvent = true;
+        }
       }
 
       this.setMarkedDates(marks);
@@ -153,7 +156,7 @@ class Calendar extends Component {
           futureScrollRange={0}
           // CALENDAR PROPS
           markingType={'multi-dot'}
-          disableAllTouchEventsForDisabledDays
+          disableAllTouchEventsForDisabledDays // buggy
           displayLoadingIndicator
           minDate={beginning.format('YYYY-MM-DD')}
           maxDate={today.format('YYYY-MM-DD')}
@@ -163,7 +166,7 @@ class Calendar extends Component {
             this.showModal();
           }}
           monthFormat={'MMMM yyyy'}
-          firstDay={1} // Monday. dayNames and dayNamesShort should still start from Sunday.
+          firstDay={1} // Monday
           markedDates={markedDates}
           theme={{
             indicatorColor: theme.colors.deejay, // loading indicator
@@ -180,7 +183,7 @@ class Calendar extends Component {
             textSectionTitleColor: '#94a1ae',
             // today
             todayTextColor: theme.colors.deejay,
-            'stylesheet.day.basic': {
+            'stylesheet.day.multiDot': {
               today: {
                 borderRadius: 16,
                 borderColor: theme.colors.deejay,
