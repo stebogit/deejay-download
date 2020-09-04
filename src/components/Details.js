@@ -1,20 +1,20 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {Modal, StyleSheet, Text, View} from 'react-native';
 import {Button, colors, Divider} from 'react-native-elements';
 import Downloader from './Downloader';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 export default function Details({data, show, onHide}) {
+  const [inDownload, setInDownload] = useState(0);
+
+  const addProcess = () => setInDownload(inDownload + 1);
+  const removeProcess = () => setInDownload(inDownload - 1);
+
+  const cantClose = inDownload > 0;
+
   if (!data) return null;
   return (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={show}
-      onRequestClose={() => {
-        onHide();
-      }}
-    >
+    <Modal animationType="slide" transparent={true} visible={show} onRequestClose={onHide}>
       <View style={styles.modal}>
         <View style={styles.modalBody}>
           <View style={styles.modalTitle}>
@@ -22,14 +22,21 @@ export default function Details({data, show, onHide}) {
           </View>
           <Divider />
           {data.shows.map((show, i) => (
-            <Downloader style={styles.downloader} key={i} data={show} />
+            <Downloader
+              key={i}
+              style={styles.downloader}
+              data={show}
+              onDownloadStart={addProcess}
+              onDownloadEnd={removeProcess}
+            />
           ))}
           <View style={styles.buttonView}>
             <Button
               title="Close"
-              icon={<Icon name="close" size={20} color={colors.primary} />}
+              icon={<Icon name="close" size={20} color={cantClose ? colors.grey3 : colors.primary} />}
               onPress={onHide}
               type="outline"
+              disabled={cantClose}
             />
           </View>
         </View>

@@ -6,8 +6,9 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {requestPermission, isPermissionGranted} from './permissions';
 import RNFS from 'react-native-fs'; // https://github.com/itinance/react-native-fs
 import ProgressBar from 'react-native-progress/Bar';
+import Toast from 'react-native-simple-toast';
 
-export default function Downloader({data, style = {}}) {
+export default function Downloader({data, onDownloadStart, onDownloadEnd, style = {}}) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [jobId, setJobId] = useState(-1);
   const [progress, setProgress] = useState(0);
@@ -28,15 +29,17 @@ export default function Downloader({data, style = {}}) {
     await RNFS.mkdir(localDir); // just in case
 
     setIsDownloading(true);
+    onDownloadStart();
 
     const ret = RNFS.downloadFile({
       fromUrl: data.url,
       toFile: tempDest,
       begin: (res) => {
-        // console.log('download started: ', data.url);
+        // console.log('Download started: ', data.url);
       },
       progress: (data) => {
         const percentage = Math.round((data.bytesWritten / data.contentLength) * 100) / 100;
+        // console.log(`Progress ${percentage * 100}%`);
         setProgress(percentage);
       },
       progressDivider: 5,
@@ -48,6 +51,8 @@ export default function Downloader({data, style = {}}) {
       .then(async (res) => {
         const exists = await RNFS.exists(tempDest).catch(console.error);
         if (exists) await RNFS.moveFile(tempDest, finalDest).catch(console.error);
+        onDownloadEnd();
+        Toast.show(`${data.fileName} is ready!`);
       })
       .catch(async (err) => {
         // even if process was cancelled, the partial file will remain on the filesystem
@@ -63,11 +68,15 @@ export default function Downloader({data, style = {}}) {
         setIsDownloading(false);
         setProgress(0);
         setJobId(-1);
+        // console.log(`Download ${data.fileName} cancelled`);
       });
   };
 
   const stopDownload = () => {
-    if (jobId !== -1) RNFS.stopDownload(jobId);
+    if (jobId !== -1) {
+      RNFS.stopDownload(jobId);
+      onDownloadEnd();
+    }
   };
 
   if (!data) return null;

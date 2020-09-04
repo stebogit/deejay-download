@@ -63,8 +63,15 @@ class Calendar extends Component {
   setSelectedDay = (selectedDay) => this.setState({selectedDay});
 
   setMarkedDates = (dates) => {
-    const markedDates = {...dates, ...this.state.markedDates};
-    this.setState({markedDates}, () => {
+    this.setState({markedDates: {...dates, ...this.state.markedDates}}, () => {
+      // save only past dates to allow update at first load
+      const markedDates = {...this.state.markedDates};
+      let date = dayjs();
+      const endOfMonth = dayjs().endOf('month');
+      while (!date.isAfter(endOfMonth)) {
+        delete markedDates[date.format('YYYY-MM-DD')];
+        date = date.add(1, 'day');
+      }
       AsyncStorage.setItem(storageKey, JSON.stringify(markedDates));
     });
   };
@@ -74,8 +81,11 @@ class Calendar extends Component {
     try {
       const requests = dates.reduce((requests, {year, month, day}) => {
         const date = `${year}-${month}-${day}`;
-        if (this.state.markedDates[date]) {
-          return requests;
+        if (this.state.markedDates[date]) return requests;
+
+        if (dayjs(date).isAfter(today, 'day')) {
+          // fake request for future dates
+          return [...requests, Promise.reject({config: {headers: {'x-request': JSON.stringify({date})}}})];
         }
 
         return [
@@ -84,27 +94,21 @@ class Calendar extends Component {
             // https://media.deejay.it/2020/07/24/episodes/deejay_chiama_italia/20200724.mp3
             `https://media.deejay.it/${year}/${month}/${day}/episodes/deejay_chiama_italia/${year}${month}${day}.mp3`,
             {
-              headers: {
-                'x-request': JSON.stringify({date, showName: 'Deejay Chiama Italia', showCode: 'djci'}),
-              },
+              headers: {'x-request': JSON.stringify({date, showName: 'Deejay Chiama Italia', showCode: 'djci'})},
             },
           ),
           axios.head(
             // https://media.deejay.it/2020/07/24/episodes/no_spoiler/20200724.mp3
             `https://media.deejay.it/${year}/${month}/${day}/episodes/no_spoiler/${year}${month}${day}.mp3`,
             {
-              headers: {
-                'x-request': JSON.stringify({date, showName: 'No Spoiler', showCode: 'nosp'}),
-              },
+              headers: {'x-request': JSON.stringify({date, showName: 'No Spoiler', showCode: 'nosp'})},
             },
           ),
           axios.head(
             // https://media.deejay.it/2020/08/21/episodes/il_volo_del_mattino/20200821.mp3
             `https://media.deejay.it/${year}/${month}/${day}/episodes/il_volo_del_mattino/${year}${month}${day}.mp3`,
             {
-              headers: {
-                'x-request': JSON.stringify({date, showName: 'Il Volo del Mattino', showCode: 'volo'}),
-              },
+              headers: {'x-request': JSON.stringify({date, showName: 'Il Volo del Mattino', showCode: 'volo'})},
             },
           ),
         ];
@@ -192,6 +196,15 @@ class Calendar extends Component {
               todayText: {
                 color: theme.colors.deejay,
                 fontWeight: 'bold',
+              },
+              dot: {
+                width: 4,
+                height: 4,
+                marginTop: -1,
+                borderRadius: 2,
+                marginLeft: 1,
+                marginRight: 1,
+                opacity: 1,
               },
             },
           }}
