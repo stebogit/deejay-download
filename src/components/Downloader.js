@@ -49,10 +49,14 @@ export default function Downloader({data, onDownloadStart, onDownloadEnd, style 
 
     ret.promise
       .then(async (res) => {
-        const exists = await RNFS.exists(tempDest).catch(console.error);
-        if (exists) await RNFS.moveFile(tempDest, finalDest).catch(console.error);
-        onDownloadEnd();
-        Toast.show(`${data.fileName} is ready!`);
+        const info = await RNFS.stat(tempDest).catch(console.error);
+        // console.log(info);
+        if (info.size === 0) {
+          Toast.show(`Ooops, ${data.fileName} is not available...`);
+        } else {
+          await RNFS.moveFile(tempDest, finalDest).catch(console.error);
+          Toast.show(`${data.fileName} is ready!`);
+        }
       })
       .catch(async (err) => {
         // even if process was cancelled, the partial file will remain on the filesystem
@@ -68,14 +72,14 @@ export default function Downloader({data, onDownloadStart, onDownloadEnd, style 
         setIsDownloading(false);
         setProgress(0);
         setJobId(-1);
-        // console.log(`Download ${data.fileName} cancelled`);
+        onDownloadEnd();
       });
   };
 
   const stopDownload = () => {
     if (jobId !== -1) {
+      // console.log(`Download ${data.fileName} cancelled`);
       RNFS.stopDownload(jobId);
-      onDownloadEnd();
     }
   };
 
