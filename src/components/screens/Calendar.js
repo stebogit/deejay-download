@@ -3,10 +3,10 @@ import {SafeAreaView, StyleSheet} from 'react-native';
 import Details from '../Details';
 import {CalendarList} from 'react-native-calendars'; // https://github.com/wix/react-native-calendars
 import dayjs from 'dayjs';
-import axios from 'axios';
+import {getDJCI, getNoSpoiler, getVolo, getDJCIOld} from '../radiodj';
 import allSettled from 'promise.allsettled';
-import AsyncStorage from '@react-native-community/async-storage';
-import {theme, storageKey} from '../../constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {storageKey, theme} from '../../constants';
 
 allSettled.shim(); // will be a no-op if not needed
 
@@ -88,30 +88,7 @@ class Calendar extends Component {
           return [...requests, Promise.reject({config: {headers: {'x-request': JSON.stringify({date})}}})];
         }
 
-        return [
-          ...requests,
-          axios.head(
-            // https://media.deejay.it/2020/07/24/episodes/deejay_chiama_italia/20200724.mp3
-            `https://media.deejay.it/${year}/${month}/${day}/episodes/deejay_chiama_italia/${year}${month}${day}.mp3`,
-            {
-              headers: {'x-request': JSON.stringify({date, showName: 'Deejay Chiama Italia', showCode: 'djci'})},
-            },
-          ),
-          axios.head(
-            // https://media.deejay.it/2020/07/24/episodes/no_spoiler/20200724.mp3
-            `https://media.deejay.it/${year}/${month}/${day}/episodes/no_spoiler/${year}${month}${day}.mp3`,
-            {
-              headers: {'x-request': JSON.stringify({date, showName: 'No Spoiler', showCode: 'nosp'})},
-            },
-          ),
-          axios.head(
-            // https://media.deejay.it/2020/08/21/episodes/il_volo_del_mattino/20200821.mp3
-            `https://media.deejay.it/${year}/${month}/${day}/episodes/il_volo_del_mattino/${year}${month}${day}.mp3`,
-            {
-              headers: {'x-request': JSON.stringify({date, showName: 'Il Volo del Mattino', showCode: 'volo'})},
-            },
-          ),
-        ];
+        return [...requests, getVolo(date), getDJCI(date), getNoSpoiler(date), getDJCIOld(date)];
       }, []);
 
       const results = await Promise.allSettled(requests);
