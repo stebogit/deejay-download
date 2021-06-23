@@ -1,7 +1,7 @@
 import React from 'react';
 import {View, StyleSheet, Pressable} from 'react-native';
 import {theme, storageKey} from '../constants';
-import AsyncStorage from '@react-native-community/async-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import Toast from 'react-native-simple-toast';
 

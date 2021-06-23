@@ -3,14 +3,14 @@ import {SafeAreaView, StyleSheet} from 'react-native';
 import Details from '../Details';
 import {CalendarList} from 'react-native-calendars'; // https://github.com/wix/react-native-calendars
 import dayjs from 'dayjs';
-import axios from 'axios';
+import {getDJCI, getVolo, getNoSpoiler} from '../radiodj';
 import allSettled from 'promise.allsettled';
-import AsyncStorage from '@react-native-community/async-storage';
-import {theme, storageKey} from '../../constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {storageKey, theme} from '../../constants';
 
 allSettled.shim(); // will be a no-op if not needed
 
-const beginning = dayjs('2020-01-01');
+const beginning = dayjs('2020-08-01');
 const today = dayjs();
 
 const dots = {
@@ -19,9 +19,9 @@ const dots = {
   volo: {key: 'volo', color: '#33b72e'},
 };
 
-function daysInMonth(month) {
-  let date = dayjs().month(month).startOf('month');
-  const end = dayjs().month(month).endOf('month');
+function daysInMonth(year, month) {
+  let date = dayjs().year(year).month(month).startOf('month');
+  const end = dayjs().year(year).month(month).endOf('month');
   const days = [];
   while (date.isBefore(end)) {
     days.push({
@@ -48,6 +48,7 @@ class Calendar extends Component {
   setFromStorage = async () => {
     try {
       const markedDates = await AsyncStorage.getItem(storageKey);
+      // console.log(JSON.stringify(markedDates));
       if (markedDates) {
         this.setState({markedDates: JSON.parse(markedDates)});
       }
@@ -76,8 +77,8 @@ class Calendar extends Component {
     });
   };
 
-  onMonthChange = async (months) => {
-    const dates = months.reduce((days, m) => [...days, ...daysInMonth(m.month - 1)], []);
+  onMonthChange = async (dateRange) => {
+    const dates = dateRange.reduce((days, m) => [...days, ...daysInMonth(m.year, m.month - 1)], []);
     try {
       const requests = dates.reduce((requests, {year, month, day}) => {
         const date = `${year}-${month}-${day}`;
@@ -88,50 +89,32 @@ class Calendar extends Component {
           return [...requests, Promise.reject({config: {headers: {'x-request': JSON.stringify({date})}}})];
         }
 
-        return [
-          ...requests,
-          axios.head(
-            // https://media.deejay.it/2020/07/24/episodes/deejay_chiama_italia/20200724.mp3
-            `https://media.deejay.it/${year}/${month}/${day}/episodes/deejay_chiama_italia/${year}${month}${day}.mp3`,
-            {
-              headers: {'x-request': JSON.stringify({date, showName: 'Deejay Chiama Italia', showCode: 'djci'})},
-            },
-          ),
-          axios.head(
-            // https://media.deejay.it/2020/07/24/episodes/no_spoiler/20200724.mp3
-            `https://media.deejay.it/${year}/${month}/${day}/episodes/no_spoiler/${year}${month}${day}.mp3`,
-            {
-              headers: {'x-request': JSON.stringify({date, showName: 'No Spoiler', showCode: 'nosp'})},
-            },
-          ),
-          axios.head(
-            // https://media.deejay.it/2020/08/21/episodes/il_volo_del_mattino/20200821.mp3
-            `https://media.deejay.it/${year}/${month}/${day}/episodes/il_volo_del_mattino/${year}${month}${day}.mp3`,
-            {
-              headers: {'x-request': JSON.stringify({date, showName: 'Il Volo del Mattino', showCode: 'volo'})},
-            },
-          ),
-        ];
+        return [...requests, ...getDJCI(date), ...getVolo(date), ...getNoSpoiler(date)];
       }, []);
 
       const results = await Promise.allSettled(requests);
 
       const marks = results.reduce((marks, result) => {
-        if (result.status === 'fulfilled') {
-          const {date, showCode, showName} = JSON.parse(result.value.config.headers['x-request']);
-          const mark = marks[date] || {};
-          const markDots = mark.dots || [];
-          const shows = mark.shows || [];
-          marks[date] = {
-            ...marks[date],
-            date,
-            dots: [...markDots, dots[showCode]],
-            shows: [...shows, {url: result.value.config.url, fileName: `${date}-${showCode}.mp3`, showCode, showName}],
-          };
-        } else {
-          const {date} = JSON.parse(result.reason.config.headers['x-request']);
+        const {value, reason} = result;
+        if (reason || value.isAxiosError) {
+          // rejected promise or ajax error:
+          // https://github.com/axios/axios#handling-errors
+          // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/allSettled#return_value
+          const {date} = JSON.parse((reason || value).config.headers['x-request']);
           if (!marks[date]) marks[date] = {};
+          return marks;
         }
+
+        const {date, showCode, showName} = JSON.parse(value.config.headers['x-request']);
+        const mark = marks[date] || {};
+        const markDots = mark.dots || [];
+        const shows = mark.shows || [];
+        marks[date] = {
+          ...marks[date],
+          date,
+          dots: [...markDots, dots[showCode]],
+          shows: [...shows, {url: value.config.url, fileName: `${date}-${showCode}.mp3`, showCode, showName}],
+        };
         return marks;
       }, {});
 

@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {StyleSheet, Text, View, Alert} from 'react-native';
 // https://github.com/react-native-elements/react-native-elements/blob/next/src/config/colors.js
 import {Button, colors} from 'react-native-elements';
@@ -12,6 +12,15 @@ export default function Downloader({data, onDownloadStart, onDownloadEnd, style 
   const [isDownloading, setIsDownloading] = useState(false);
   const [jobId, setJobId] = useState(-1);
   const [progress, setProgress] = useState(0);
+  const [exists, setExists] = useState(0);
+
+  const localDir = `${RNFS.ExternalStorageDirectoryPath}/DJCI`;
+  const fileDestination = `${localDir}/${data.fileName}`;
+
+  useEffect(() => {
+    setExists(0);
+    RNFS.exists(fileDestination).then((file) => setExists(file ? 1 : -1));
+  }, [fileDestination]);
 
   const download = async () => {
     const granted = await isPermissionGranted();
@@ -23,8 +32,6 @@ export default function Downloader({data, onDownloadStart, onDownloadEnd, style 
       }
     }
 
-    const localDir = `${RNFS.ExternalStorageDirectoryPath}/DJCI`;
-    const finalDest = `${localDir}/${data.fileName}`;
     const tempDest = `${RNFS.TemporaryDirectoryPath}/${data.fileName}`;
     await RNFS.mkdir(localDir); // just in case
 
@@ -54,14 +61,16 @@ export default function Downloader({data, onDownloadStart, onDownloadEnd, style 
         if (info.size === 0) {
           Toast.show(`Ooops, ${data.fileName} is not available...`);
         } else {
-          await RNFS.moveFile(tempDest, finalDest).catch(console.error);
+          await RNFS.moveFile(tempDest, fileDestination).catch(console.error);
+          setExists(1);
           Toast.show(`${data.fileName} is ready!`);
         }
       })
       .catch(async (err) => {
         // even if process was cancelled, the partial file will remain on the filesystem
-        const exists = await RNFS.exists(tempDest).catch(console.error);
-        if (exists) await RNFS.unlink(tempDest).catch(console.error);
+        // console.log(err);
+        const fileExists = await RNFS.exists(tempDest).catch(console.error);
+        if (fileExists) await RNFS.unlink(tempDest).catch(console.error);
         const processCancelled = err.code === 'EUNSPECIFIED' && jobId === -1;
         if (!processCancelled) {
           Alert.alert(`ERROR: Code: ${err.code} Message: ${err.message}`);
@@ -69,6 +78,7 @@ export default function Downloader({data, onDownloadStart, onDownloadEnd, style 
         }
       })
       .finally(() => {
+        // console.log('finally');
         setIsDownloading(false);
         setProgress(0);
         setJobId(-1);
@@ -87,7 +97,20 @@ export default function Downloader({data, onDownloadStart, onDownloadEnd, style 
   return (
     <View style={style}>
       <View style={styles.container}>
-        <Text style={styles.item}>{data.showName}</Text>
+        <Text style={styles.item}>
+          <Icon
+            name={
+              isDownloading || exists === 0
+                ? 'progress-check'
+                : exists === 1
+                ? 'check-circle'
+                : 'checkbox-blank-circle-outline'
+            }
+            size={15}
+            color={exists === 1 ? 'green' : 'lightgrey'}
+          />{' '}
+          {data.showName}
+        </Text>
         <Button
           style={styles.item}
           icon={<Icon name={isDownloading ? 'cancel' : 'download'} size={20} color={'white'} />}
